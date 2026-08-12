@@ -1,0 +1,66 @@
+name: Publish to PyPI
+
+# Builds sdist + wheel and publishes them to PyPI whenever a GitHub
+# Release is published (tag pattern v*.*.*). Uses PyPI's "Trusted
+# Publishing" (OIDC) — no API token stored in secrets required, as
+# long as the PyPI project has this repo/workflow registered as a
+# trusted publisher. See README.md for setup steps.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build sdist & wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tooling
+        run: python -m pip install --upgrade pip build
+
+      - name: Run tests before packaging
+        run: |
+          pip install -r requirements-dev.txt
+          pytest
+
+      - name: Build distributions
+        run: python -m build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-distributions
+          path: dist/
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/cicd-demo/
+    permissions:
+      id-token: write # required for PyPI trusted publishing (OIDC)
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: python-distributions
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        # No 'password' input needed when using Trusted Publishing.
+        # If you'd rather use a classic API token, add:
+        #   with:
+        #     password: ${{ secrets.PYPI_API_TOKEN }}

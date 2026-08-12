@@ -1,0 +1,37 @@
+Bootstrap: docker
+From: debian:bookworm-slim
+
+%labels
+    Author       your-name
+    Application  cicd-demo
+    Description  Minimal hello-world demo: Debian + curl + python3 + numpy
+
+%files
+    hello.py /app/hello.py
+    requirements.txt /app/requirements.txt
+
+%post
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y --no-install-recommends \
+        curl \
+        ca-certificates \
+        python3 \
+        python3-pip \
+        python3-venv
+    rm -rf /var/lib/apt/lists/*
+
+    python3 -m venv /opt/venv
+    /opt/venv/bin/pip install --upgrade pip
+    /opt/venv/bin/pip install -r /app/requirements.txt
+
+%environment
+    export PATH="/opt/venv/bin:${PATH}"
+    export PYTHONUNBUFFERED=1
+
+%runscript
+    exec python3 /app/hello.py "$@"
+
+%test
+    /opt/venv/bin/python3 -c "import numpy; print('numpy', numpy.__version__, 'OK')"
+    curl --version | head -n1
