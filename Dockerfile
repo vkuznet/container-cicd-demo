@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 #
-# cicd-demo container image
+# py-cicd-demo container image
 # Base   : debian:bookworm-slim
 # Packs  : curl, python3, pip, and a small set of python libs (numpy, requests)
 #
@@ -59,7 +59,7 @@ ENTRYPOINT ["python3", "hello.py"]
 CMD ["World"]
 
 # --- OCI labels (also set/overridden at build time via --label) ---------
-LABEL org.opencontainers.image.title="cicd-demo" \
+LABEL org.opencontainers.image.title="py-cicd-demo" \
       org.opencontainers.image.description="Minimal demo app: Debian + curl + python3 + numpy" \
       org.opencontainers.image.licenses="MIT" \
-      org.opencontainers.image.source="https://github.com/vkuznet/cicd-demo"
+      org.opencontainers.image.source="https://github.com/vkuznet/py-cicd-demo"
