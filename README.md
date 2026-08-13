@@ -187,7 +187,7 @@ Triggered on push to `main`, on version tags (`v*.*.*`), and on PRs
        scanning** tab
    - On push/tag events (not PRs): pushes the image to **both**
      `docker.io/<DOCKERHUB_USERNAME>/cicd-demo` and
-     `ghcr.io/<owner>/cicd-demo`.
+     `ghcr.io/vkuznet/cicd-demo`.
    - Saves the pushed image as a `.tar` and uploads it as a build
      artifact for the deploy job.
 3. **`apptainer`** — builds `cicd-demo.sif` from `apptainer.def`,
@@ -199,6 +199,30 @@ Triggered on push to `main`, on version tags (`v*.*.*`), and on PRs
    - `scp`s it to `DEPLOY_HOST` via `appleboy/scp-action`.
    - SSHes in (`appleboy/ssh-action`) and runs `docker load` +
      `docker run` to (re)start the container on the upstream server.
+
+To make this CI/CD workflow working you **MUST** create new access token on
+hub.docker.com and provide it to github repo as secret along with your user
+name. Follow these steps:
+
+- Log in to hub.docker.com
+- Go to Account Settings → Security → Access Tokens
+- Click New Access Token
+  - Give it a description (e.g. github-actions-hello-cicd-demo) 
+  - Permissions: Read & Write (you need push access)
+  - Click Generate and copy the token immediately — Docker Hub only shows it once
+- Add both secrets to your GitHub repo
+  - In your repo: Settings → Secrets and variables → Actions → New repository secret
+
+#### Published Images
+You can find published images on
+- docker hub: `https://hub.docker.com/repository/docker/veknet/cicd-demo/general`
+- github repo: `https://github.com/vkuznet?tab=packages`
+
+#### Security report
+this workflow generates security reports of the software packages used in
+generated images and it can be found in `Security and quality` tab on github,
+see direct link:
+`https://github.com/vkuznet/container-cicd-demo/security/code-scanning`
 
 ### `publish-pypi.yml` — release the Python package
 
@@ -253,10 +277,10 @@ declared in the workflow.
 docker pull <dockerhub-username>/cicd-demo:latest
 
 # GHCR
-docker pull ghcr.io/<owner>/cicd-demo:latest
+docker pull ghcr.io/vkuznet/cicd-demo:latest
 
 # Apptainer .sif pushed as an OCI artifact to GHCR
-apptainer pull oras://ghcr.io/<owner>/cicd-demo-sif:latest
+apptainer pull oras://ghcr.io/vkuznet/cicd-demo-sif:latest
 ```
 
 ## License
