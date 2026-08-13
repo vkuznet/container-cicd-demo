@@ -222,7 +222,7 @@ You can find published images on
 this workflow generates security reports of the software packages used in
 generated images and it can be found in `Security and quality` tab on github,
 see direct link:
-`https://github.com/vkuznet/container-cicd-demo/security/code-scanning`
+`https://github.com/vkuznet/py-cicd-demo/security/code-scanning`
 
 ### `publish-pypi.yml` — release the Python package
 
