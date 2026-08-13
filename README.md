@@ -1,4 +1,4 @@
-# cicd-demo
+# py-cicd-demo
 
 A deliberately tiny Python app (`hello.py`) wrapped in a **comprehensive
 CI/CD pipeline** that demonstrates:
@@ -15,7 +15,7 @@ CI/CD pipeline** that demonstrates:
 The application code is intentionally trivial — the pipeline is the point.
 
 ```
-cicd-demo/
+py-cicd-demo/
 ├── hello.py                        # the app
 ├── test_hello.py                   # unit tests
 ├── requirements.txt                # runtime deps (numpy)
@@ -77,8 +77,8 @@ Notes on the Dockerfile:
 Build and run it yourself:
 
 ```bash
-docker build -t cicd-demo:local .
-docker run --rm cicd-demo:local CHESS_USER
+docker build -t py-cicd-demo:local .
+docker run --rm py-cicd-demo:local CHESS_USER
 ```
 
 If we do not have native apptainer we may save docker image to a archive
@@ -86,19 +86,19 @@ and rebuild apptainer image with it, e.g.
 
 ```
 # ensure that we rebuild image for proper architecture
-docker buildx build --platform linux/amd64 -t cicd-demo:linux-amd64 .
+docker buildx build --platform linux/amd64 -t py-cicd-demo:linux-amd64 .
 
 # verify that we indeed using proper arcitecture
-docker inspect cicd-demo:linux-amd64 | grep Architecture
+docker inspect py-cicd-demo:linux-amd64 | grep Architecture
 
 # save docker image to tarball
-docker save cicd-demo:linux-amd64 -o cicd-demo.tar
+docker save py-cicd-demo:linux-amd64 -o py-cicd-demo.tar
 
 # copy your tarball to remote linux node
-scp cicd-demo.tar user@host:/tmp/cicd-demo.tar
+scp py-cicd-demo.tar user@host:/tmp/py-cicd-demo.tar
 
 # convert image tarball into apptainer image
-apptainer build /tmp/cicd-demo.sif docker-archive:/tmp/cicd-demo.tar
+apptainer build /tmp/py-cicd-demo.sif docker-archive:/tmp/py-cicd-demo.tar
 ```
 
 ### Apptainer / Singularity image
@@ -110,14 +110,14 @@ Docker base so the two images stay consistent.
 
 ```bash
 sudo apt-get install -y apptainer   # or see apptainer.org for your OS
-sudo apptainer build cicd-demo.sif apptainer.def
-apptainer run cicd-demo.sif CHESS_USER
+sudo apptainer build py-cicd-demo.sif apptainer.def
+apptainer run py-cicd-demo.sif CHESS_USER
 ```
 
 ### Usefull commands
 
 ```
-docker history cicd-demo:linux-amd64
+docker history py-cicd-demo:linux-amd64
 IMAGE          CREATED         CREATED BY                                      SIZE      COMMENT
 a3e284b92b8b   7 minutes ago   LABEL org.opencontainers.image.title=cicd-de…   0B        buildkit.dockerfile.v0
 <missing>      7 minutes ago   CMD ["World"]                                   0B        buildkit.dockerfile.v0
@@ -136,26 +136,26 @@ a3e284b92b8b   7 minutes ago   LABEL org.opencontainers.image.title=cicd-de…  
 <missing>      9 days ago      # debian.sh --arch 'amd64' out/ 'bookworm' '…   85.3MB    debuerreotype 0.17
 
 # login to the container
-docker run --rm -it cicd-demo:local /bin/bash
+docker run --rm -it py-cicd-demo:local /bin/bash
 # if your container is already running, then use
 docker exec -it container_name_or_id /bin/bash
 
 
 # for apptainer
-apptainer inspect /tmp/cicd-demo.sif
+apptainer inspect /tmp/py-cicd-demo.sif
 org.label-schema.build-arch: amd64
 org.label-schema.build-date: Wednesday_12_August_2026_16:3:47_EDT
 org.label-schema.schema-version: 1.0
 org.label-schema.usage.apptainer.version: 1.2.5-1.el9
 org.label-schema.usage.singularity.deffile.bootstrap: docker-archive
-org.label-schema.usage.singularity.deffile.from: /tmp/cicd-demo.tar
+org.label-schema.usage.singularity.deffile.from: /tmp/py-cicd-demo.tar
 org.opencontainers.image.description: Minimal demo app: Debian + curl + python3 + numpy
 org.opencontainers.image.licenses: MIT
-org.opencontainers.image.source: https://github.com/vkuznet/cicd-demo
-org.opencontainers.image.title: cicd-demo
+org.opencontainers.image.source: https://github.com/vkuznet/py-cicd-demo
+org.opencontainers.image.title: py-cicd-demo
 
 # get apptainer shell
-apptainer shell /tmp/cicd-demo.sif
+apptainer shell /tmp/py-cicd-demo.sif
 
 ```
 
@@ -186,11 +186,11 @@ Triggered on push to `main`, on version tags (`v*.*.*`), and on PRs
      - a `trivy-results.sarif` uploaded to the repo's **Security → Code
        scanning** tab
    - On push/tag events (not PRs): pushes the image to **both**
-     `docker.io/<DOCKERHUB_USERNAME>/cicd-demo` and
-     `ghcr.io/vkuznet/cicd-demo`.
+     `docker.io/<DOCKERHUB_USERNAME>/py-cicd-demo` and
+     `ghcr.io/vkuznet/py-cicd-demo`.
    - Saves the pushed image as a `.tar` and uploads it as a build
      artifact for the deploy job.
-3. **`apptainer`** — builds `cicd-demo.sif` from `apptainer.def`,
+3. **`apptainer`** — builds `py-cicd-demo.sif` from `apptainer.def`,
    smoke-tests it (`apptainer run` + `apptainer test`), uploads it as a
    build artifact, and (on push/tag) pushes it to GHCR as an OCI artifact
    via `apptainer push oras://ghcr.io/...`.
@@ -207,7 +207,7 @@ name. Follow these steps:
 - Log in to hub.docker.com
 - Go to Account Settings → Security → Access Tokens
 - Click New Access Token
-  - Give it a description (e.g. github-actions-hello-cicd-demo) 
+  - Give it a description (e.g. github-actions-hello-py-cicd-demo) 
   - Permissions: Read & Write (you need push access)
   - Click Generate and copy the token immediately — Docker Hub only shows it once
 - Add both secrets to your GitHub repo
@@ -215,7 +215,7 @@ name. Follow these steps:
 
 #### Published Images
 You can find published images on
-- docker hub: `https://hub.docker.com/repository/docker/<DOCKERHUB_USERNAME>/cicd-demo/general`
+- docker hub: `https://hub.docker.com/repository/docker/<DOCKERHUB_USERNAME>/py-cicd-demo/general`
 - github repo: `https://github.com/vkuznet?tab=packages`
 
 #### Security report
@@ -264,7 +264,7 @@ declared in the workflow.
 ### Upstream deploy server prerequisites
 
 - Docker installed and the `DEPLOY_USER` in the `docker` group.
-- `~/deployments/cicd-demo/` directory (or let `scp-action` create it).
+- `~/deployments/py-cicd-demo/` directory (or let `scp-action` create it).
 - The corresponding public key for `DEPLOY_SSH_KEY` in
   `~/.ssh/authorized_keys` for `DEPLOY_USER`.
 
@@ -274,13 +274,13 @@ declared in the workflow.
 
 ```bash
 # Docker Hub
-docker pull <dockerhub-username>/cicd-demo:latest
+docker pull <dockerhub-username>/py-cicd-demo:latest
 
 # GHCR
-docker pull ghcr.io/vkuznet/cicd-demo:latest
+docker pull ghcr.io/vkuznet/py-cicd-demo:latest
 
 # Apptainer .sif pushed as an OCI artifact to GHCR
-apptainer pull oras://ghcr.io/vkuznet/cicd-demo-sif:latest
+apptainer pull oras://ghcr.io/vkuznet/py-cicd-demo-sif:latest
 ```
 
 ## License

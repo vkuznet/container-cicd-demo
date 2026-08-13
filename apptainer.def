@@ -3,7 +3,7 @@ From: debian:bookworm-slim
 
 %labels
     Author       your-name
-    Application  cicd-demo
+    Application  py-cicd-demo
     Description  Minimal hello-world demo: Debian + curl + python3 + numpy
 
 %files
