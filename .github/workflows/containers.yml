@@ -220,39 +220,39 @@ jobs:
   # ---------------------------------------------------------------------
   # 4) Copy the built Docker image to an upstream server over SSH
   # ---------------------------------------------------------------------
-  deploy:
-    name: Deploy image to upstream server via SSH
-    needs: docker
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download image tar artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: docker-image-tar
-
-      - name: Copy image tar to upstream server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: ${{ secrets.DEPLOY_PORT || 22 }}
-          source: "cicd-demo.tar"
-          target: "~/deployments/cicd-demo/"
-
-      - name: Load & (re)start the container on the upstream server
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: ${{ secrets.DEPLOY_PORT || 22 }}
-          script: |
-            set -e
-            cd ~/deployments/cicd-demo
-            docker load -i cicd-demo.tar
-            docker rm -f cicd-demo || true
-            docker run -d --name cicd-demo \
-              --restart unless-stopped \
-              ghcr.io/${{ github.repository_owner }}/cicd-demo:latest
+#  deploy:
+#    name: Deploy image to upstream server via SSH
+#    needs: docker
+#    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Download image tar artifact
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: docker-image-tar
+#
+#      - name: Copy image tar to upstream server
+#        uses: appleboy/scp-action@v0.1.7
+#        with:
+#          host: ${{ secrets.DEPLOY_HOST }}
+#          username: ${{ secrets.DEPLOY_USER }}
+#          key: ${{ secrets.DEPLOY_SSH_KEY }}
+#          port: ${{ secrets.DEPLOY_PORT || 22 }}
+#          source: "cicd-demo.tar"
+#          target: "~/deployments/cicd-demo/"
+#
+#      - name: Load & (re)start the container on the upstream server
+#        uses: appleboy/ssh-action@v1.2.0
+#        with:
+#          host: ${{ secrets.DEPLOY_HOST }}
+#          username: ${{ secrets.DEPLOY_USER }}
+#          key: ${{ secrets.DEPLOY_SSH_KEY }}
+#          port: ${{ secrets.DEPLOY_PORT || 22 }}
+#          script: |
+#            set -e
+#            cd ~/deployments/cicd-demo
+#            docker load -i cicd-demo.tar
+#            docker rm -f cicd-demo || true
+#            docker run -d --name cicd-demo \
+#              --restart unless-stopped \
+#              ghcr.io/${{ github.repository_owner }}/cicd-demo:latest
