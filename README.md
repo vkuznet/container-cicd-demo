@@ -215,7 +215,7 @@ name. Follow these steps:
 
 #### Published Images
 You can find published images on
-- docker hub: `https://hub.docker.com/repository/docker/veknet/cicd-demo/general`
+- docker hub: `https://hub.docker.com/repository/docker/<DOCKERHUB_USERNAME>/cicd-demo/general`
 - github repo: `https://github.com/vkuznet?tab=packages`
 
 #### Security report
