@@ -1,0 +1,130 @@
+name: Release
+
+# Fires when you push a tag like v1.2.3. Re-runs the test suite as a gate,
+# builds the Apptainer (.sif) image, packages a source tarball, and
+# publishes a GitHub Release with both artifacts attached and
+# auto-generated release notes.
+#
+# This workflow only *creates the GitHub Release*. Publishing to PyPI is
+# handled separately by publish_pypi.yml, which triggers on `release:
+# published` — so a tag push here kicks off both in sequence.
+#
+# No extra secrets required beyond the auto-provided GITHUB_TOKEN.
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+env:
+  IMAGE_NAME: py-cicd-demo
+
+jobs:
+  # ---------------------------------------------------------------------
+  # 1) Re-run the unit tests as a gate before we spend time building/releasing
+  # ---------------------------------------------------------------------
+  test:
+    name: Test before release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - run: pip install -r requirements-dev.txt
+      - run: pytest
+
+  # ---------------------------------------------------------------------
+  # 2) Build the Apptainer (.sif) image for this tag
+  # ---------------------------------------------------------------------
+  apptainer:
+    name: Build Apptainer (.sif) image
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Apptainer
+        uses: eWaterCycle/setup-apptainer@v2
+        with:
+          apptainer-version: "1.3.4"
+
+      - name: Build .sif from apptainer.def
+        run: |
+          sudo apptainer build ${{ env.IMAGE_NAME }}-${{ github.ref_name }}.sif apptainer.def
+
+      - name: Smoke-test the .sif image
+        run: |
+          apptainer run ${{ env.IMAGE_NAME }}-${{ github.ref_name }}.sif CI-Apptainer
+          apptainer test ${{ env.IMAGE_NAME }}-${{ github.ref_name }}.sif
+
+      - name: Upload .sif artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apptainer-sif
+          path: ${{ env.IMAGE_NAME }}-${{ github.ref_name }}.sif
+          retention-days: 7
+
+  # ---------------------------------------------------------------------
+  # 3) Package a plain source tarball for this tag
+  # ---------------------------------------------------------------------
+  source-tarball:
+    name: Package source tarball
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create source tarball from tag
+        run: |
+          git archive --format=tar.gz \
+            --prefix="${{ env.IMAGE_NAME }}-${{ github.ref_name }}/" \
+            -o "${{ env.IMAGE_NAME }}-${{ github.ref_name }}.tar.gz" \
+            "${{ github.ref_name }}"
+
+      - name: Upload source tarball artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-tarball
+          path: ${{ env.IMAGE_NAME }}-${{ github.ref_name }}.tar.gz
+          retention-days: 7
+
+  # ---------------------------------------------------------------------
+  # 4) Create the GitHub Release, attach both artifacts, add release notes
+  # ---------------------------------------------------------------------
+  release:
+    name: Create GitHub Release
+    needs: [apptainer, source-tarball]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # required to create releases
+    steps:
+      - name: Download .sif artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: apptainer-sif
+          path: dist/
+
+      - name: Download source tarball artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: source-tarball
+          path: dist/
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            dist/${{ env.IMAGE_NAME }}-${{ github.ref_name }}.sif
+            dist/${{ env.IMAGE_NAME }}-${{ github.ref_name }}.tar.gz
