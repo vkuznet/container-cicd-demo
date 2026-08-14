@@ -23,9 +23,9 @@ on:
   workflow_dispatch: {}
 
 env:
-  IMAGE_NAME: cicd-demo
-  DOCKERHUB_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/cicd-demo
-  GHCR_IMAGE: ghcr.io/${{ github.repository_owner }}/cicd-demo
+  IMAGE_NAME: py-cicd-demo
+  DOCKERHUB_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/py-cicd-demo
+  GHCR_IMAGE: ghcr.io/${{ github.repository_owner }}/py-cicd-demo
 
 permissions:
   contents: read
@@ -161,14 +161,14 @@ jobs:
       - name: Save image as tar (for the SSH deploy job)
         if: github.event_name != 'pull_request'
         run: |
-          docker save "${{ env.GHCR_IMAGE }}:latest" -o cicd-demo.tar
+          docker save "${{ env.GHCR_IMAGE }}:latest" -o py-cicd-demo.tar
 
       - name: Upload image tar artifact
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: docker-image-tar
-          path: cicd-demo.tar
+          path: py-cicd-demo.tar
           retention-days: 7
 
   # ---------------------------------------------------------------------
@@ -189,18 +189,18 @@ jobs:
 
       - name: Build .sif from apptainer.def
         run: |
-          sudo apptainer build cicd-demo.sif apptainer.def
+          sudo apptainer build py-cicd-demo.sif apptainer.def
 
       - name: Smoke-test the .sif image
         run: |
-          apptainer run cicd-demo.sif CI-Apptainer
-          apptainer test cicd-demo.sif
+          apptainer run py-cicd-demo.sif CI-Apptainer
+          apptainer test py-cicd-demo.sif
 
       - name: Upload .sif artifact
         uses: actions/upload-artifact@v4
         with:
           name: apptainer-sif
-          path: cicd-demo.sif
+          path: py-cicd-demo.sif
           retention-days: 7
 
       # Apptainer images can also be pushed as OCI artifacts to any
@@ -214,8 +214,8 @@ jobs:
       - name: Push .sif to GHCR as an OCI artifact
         if: github.event_name != 'pull_request'
         run: |
-          apptainer push cicd-demo.sif \
-            oras://ghcr.io/${{ github.repository_owner }}/cicd-demo-sif:latest
+          apptainer push py-cicd-demo.sif \
+            oras://ghcr.io/${{ github.repository_owner }}/py-cicd-demo-sif:latest
 
   # ---------------------------------------------------------------------
   # 4) Copy the built Docker image to an upstream server over SSH
@@ -238,8 +238,8 @@ jobs:
 #          username: ${{ secrets.DEPLOY_USER }}
 #          key: ${{ secrets.DEPLOY_SSH_KEY }}
 #          port: ${{ secrets.DEPLOY_PORT || 22 }}
-#          source: "cicd-demo.tar"
-#          target: "~/deployments/cicd-demo/"
+#          source: "py-cicd-demo.tar"
+#          target: "~/deployments/py-cicd-demo/"
 #
 #      - name: Load & (re)start the container on the upstream server
 #        uses: appleboy/ssh-action@v1.2.0
@@ -250,9 +250,9 @@ jobs:
 #          port: ${{ secrets.DEPLOY_PORT || 22 }}
 #          script: |
 #            set -e
-#            cd ~/deployments/cicd-demo
-#            docker load -i cicd-demo.tar
-#            docker rm -f cicd-demo || true
-#            docker run -d --name cicd-demo \
+#            cd ~/deployments/py-cicd-demo
+#            docker load -i py-cicd-demo.tar
+#            docker rm -f py-cicd-demo || true
+#            docker run -d --name py-cicd-demo \
 #              --restart unless-stopped \
-#              ghcr.io/${{ github.repository_owner }}/cicd-demo:latest
+#              ghcr.io/${{ github.repository_owner }}/py-cicd-demo:latest

@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/project/cicd-demo/
+      url: https://pypi.org/project/py-cicd-demo/
     permissions:
       id-token: write # required for PyPI trusted publishing (OIDC)
     steps:
@@ -60,7 +60,5 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        # No 'password' input needed when using Trusted Publishing.
-        # If you'd rather use a classic API token, add:
-        #   with:
-        #     password: ${{ secrets.PYPI_API_TOKEN }}
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
