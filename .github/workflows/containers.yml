@@ -57,6 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image_ref: ${{ steps.meta.outputs.tags }}
+      image_version: ${{ steps.meta.outputs.version }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -98,6 +99,12 @@ jobs:
 
       # Build once, load into the local docker daemon so Trivy can scan it,
       # then (on push/tag events only) push the same tags to both registries.
+      #
+      # NOTE: `latest` is only ever tagged on pushes to the default branch
+      # (see `type=raw,value=latest,enable={{is_default_branch}}` above), so
+      # it does NOT exist on a tag push. Every step below that needs a
+      # locally-loaded reference uses the branch/trigger-independent
+      # `:ci-scan` tag instead of hardcoding `:latest`.
       - name: Build image (load locally for scanning)
         uses: docker/build-push-action@v6
         with:
@@ -115,7 +122,7 @@ jobs:
       - name: Scan image with Trivy (vulnerability report)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: ${{ env.GHCR_IMAGE }}:latest
+          image-ref: ${{ env.GHCR_IMAGE }}:ci-scan
           format: "table"
           output: "trivy-report.txt"
           severity: "CRITICAL,HIGH,MEDIUM"
@@ -124,7 +131,7 @@ jobs:
       - name: Generate SARIF report for GitHub Security tab
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: ${{ env.GHCR_IMAGE }}:latest
+          image-ref: ${{ env.GHCR_IMAGE }}:ci-scan
           format: "sarif"
           output: "trivy-results.sarif"
           severity: "CRITICAL,HIGH,MEDIUM"
@@ -161,7 +168,8 @@ jobs:
       - name: Save image as tar (for the SSH deploy job)
         if: github.event_name != 'pull_request'
         run: |
-          docker save "${{ env.GHCR_IMAGE }}:latest" -o py-cicd-demo.tar
+          docker tag "${{ env.GHCR_IMAGE }}:ci-scan" "${{ env.GHCR_IMAGE }}:${{ steps.meta.outputs.version }}"
+          docker save "${{ env.GHCR_IMAGE }}:${{ steps.meta.outputs.version }}" -o py-cicd-demo.tar
 
       - name: Upload image tar artifact
         if: github.event_name != 'pull_request'
