@@ -5,8 +5,8 @@ name: Containers (build, scan, push, deploy)
 # and copies the built image to an upstream server over SSH.
 #
 # Required repository secrets:
-#   DOCKERHUB_USERNAME   Docker Hub username
-#   DOCKERHUB_TOKEN      Docker Hub access token (not your password)
+#   DOCKERHUB_USERNAME    Docker Hub username
+#   DOCKERHUB_TOKEN       Docker Hub access token (not your password)
 #   DEPLOY_HOST          Hostname/IP of the upstream server
 #   DEPLOY_USER           SSH user on the upstream server
 #   DEPLOY_SSH_KEY        Private key with access to DEPLOY_USER@DEPLOY_HOST
@@ -97,19 +97,13 @@ jobs:
             type=semver,pattern={{version}}
             type=sha,format=short
 
-      # Build once, load into the local docker daemon so Trivy can scan it,
-      # then (on push/tag events only) push the same tags to both registries.
-      #
-      # NOTE: `latest` is only ever tagged on pushes to the default branch
-      # (see `type=raw,value=latest,enable={{is_default_branch}}` above), so
-      # it does NOT exist on a tag push. Every step below that needs a
-      # locally-loaded reference uses the branch/trigger-independent
-      # `:ci-scan` tag instead of hardcoding `:latest`.
+      # Step A: Build single-arch image locally so Docker daemon & Trivy can interact with it
       - name: Build image (load locally for scanning)
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
+          platforms: linux/amd64
           push: false
           load: true
           tags: |
@@ -126,7 +120,7 @@ jobs:
           format: "table"
           output: "trivy-report.txt"
           severity: "CRITICAL,HIGH,MEDIUM"
-          exit-code: "0" # don't fail the build; report only (flip to "1" to gate on findings)
+          exit-code: "0"
 
       - name: Generate SARIF report for GitHub Security tab
         uses: aquasecurity/trivy-action@v0.36.0
@@ -153,12 +147,14 @@ jobs:
             trivy-results.sarif
           retention-days: 30
 
+      # Step B: Build and push multi-architecture image (amd64 + arm64) directly to registries
       - name: Push image to Docker Hub & GHCR
         if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -211,8 +207,6 @@ jobs:
           path: py-cicd-demo.sif
           retention-days: 7
 
-      # Apptainer images can also be pushed as OCI artifacts to any
-      # OCI-compliant registry (GHCR supports this natively).
       - name: Log in to GHCR (oras push)
         if: github.event_name != 'pull_request'
         run: |
@@ -224,43 +218,3 @@ jobs:
         run: |
           apptainer push py-cicd-demo.sif \
             oras://ghcr.io/${{ github.repository_owner }}/py-cicd-demo-sif:latest
-
-  # ---------------------------------------------------------------------
-  # 4) Copy the built Docker image to an upstream server over SSH
-  # ---------------------------------------------------------------------
-#  deploy:
-#    name: Deploy image to upstream server via SSH
-#    needs: docker
-#    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Download image tar artifact
-#        uses: actions/download-artifact@v4
-#        with:
-#          name: docker-image-tar
-#
-#      - name: Copy image tar to upstream server
-#        uses: appleboy/scp-action@v0.1.7
-#        with:
-#          host: ${{ secrets.DEPLOY_HOST }}
-#          username: ${{ secrets.DEPLOY_USER }}
-#          key: ${{ secrets.DEPLOY_SSH_KEY }}
-#          port: ${{ secrets.DEPLOY_PORT || 22 }}
-#          source: "py-cicd-demo.tar"
-#          target: "~/deployments/py-cicd-demo/"
-#
-#      - name: Load & (re)start the container on the upstream server
-#        uses: appleboy/ssh-action@v1.2.0
-#        with:
-#          host: ${{ secrets.DEPLOY_HOST }}
-#          username: ${{ secrets.DEPLOY_USER }}
-#          key: ${{ secrets.DEPLOY_SSH_KEY }}
-#          port: ${{ secrets.DEPLOY_PORT || 22 }}
-#          script: |
-#            set -e
-#            cd ~/deployments/py-cicd-demo
-#            docker load -i py-cicd-demo.tar
-#            docker rm -f py-cicd-demo || true
-#            docker run -d --name py-cicd-demo \
-#              --restart unless-stopped \
-#              ghcr.io/${{ github.repository_owner }}/py-cicd-demo:latest

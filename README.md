@@ -277,6 +277,10 @@ declared in the workflow.
 docker pull <dockerhub-username>/py-cicd-demo:latest
 
 # GHCR
+# obtain GITHUB_PAT (personal token)
+# login with it:
+echo $GITHUB_PAT | docker login ghcr.io -u vkuznet --password-stdin
+# pull out image
 docker pull ghcr.io/vkuznet/py-cicd-demo:latest
 
 # Apptainer .sif pushed as an OCI artifact to GHCR
